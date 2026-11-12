@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Good food, shared{% endblock %}
+{% block content %}
+<section class="hero-section">
+  <div class="container">
+    <div class="row align-items-center g-5 py-5 py-lg-6">
+      <div class="col-lg-6">
+        <span class="eyebrow"><i class="bi bi-sunrise me-2"></i>Food rescue, made local</span>
+        <h1 class="display-3 fw-bold mt-3">Good food.<br><span class="text-green">A better destination.</span></h1>
+        <p class="lead text-secondary mt-3 mb-4">MealBridge connects surplus food with the community organizations ready to get it onto someone’s table.</p>
+        <div class="d-flex flex-wrap gap-3">
+          {% if current_user.is_authenticated %}
+            <a class="btn btn-success btn-lg px-4" href="{{ url_for('auth.dashboard') }}">Go to your dashboard <i class="bi bi-arrow-right ms-1"></i></a>
+          {% else %}
+            <a class="btn btn-success btn-lg px-4" href="{{ url_for('auth.register') }}">Get started <i class="bi bi-arrow-right ms-1"></i></a>
+            <a class="btn btn-outline-success btn-lg px-4" href="{{ url_for('auth.about') }}">How it works</a>
+          {% endif %}
+        </div>
+        <div class="hero-note mt-4"><i class="bi bi-shield-check text-green me-2"></i>Verified community partners. Safe, timely pickups.</div>
+      </div>
+      <div class="col-lg-6">
+        <div class="hero-photo-wrap">
+          <img class="hero-photo" src="{{ url_for('static', filename='images/mealbridge-food-rescue.png') }}" alt="Freshly prepared vegetable biryani ready to be shared">
+          <div class="hero-photo-tint"></div>
+          <div class="art-caption"><span class="caption-icon"><i class="bi bi-heart-fill"></i></span><span><strong>From surplus to shared.</strong><small>One pickup can change a day.</small></span></div>
+          <div class="art-stamp"><i class="bi bi-recycle"></i><span>Rescue<br>more</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container stats-strip">
+  <div class="row g-0">
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ "{:,}".format(stats.donations or 0) }}</strong><span>food donations</span></div>
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ "{:,}".format(stats.meals or 0) }}</strong><span>meals rescued</span></div>
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ stats.waste_kg }}</strong><span>est. kg avoided*</span></div>
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ "{:,}".format(stats.pickups or 0) }}</strong><span>successful pickups</span></div>
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ "{:,}".format(stats.ngos or 0) }}</strong><span>verified NGOs</span></div>
+    <div class="col-6 col-lg-2 stat-cell"><strong>{{ "{:,}".format(stats.donors or 0) }}</strong><span>food partners</span></div>
+  </div>
+  <p class="small text-secondary text-center mt-2 mb-0">*Planning estimate: 0.5 kg of food per completed meal.</p>
+</section>
+
+<section class="container py-5 py-lg-6">
+  <div class="d-flex justify-content-between align-items-end mb-4">
+    <div><span class="eyebrow">Rescue before expiry</span><h2 class="section-title mt-2 mb-0">Food looking for a table</h2></div>
+    {% if current_user.is_authenticated and current_user.role == 'ngo' %}<a class="btn btn-outline-success d-none d-sm-inline-flex" href="{{ url_for('ngo.available_food') }}">Browse all food <i class="bi bi-arrow-right ms-2"></i></a>{% endif %}
+  </div>
+  <div class="row g-4">
+    {% for donation in recent %}
+      <div class="col-md-6 col-lg-4">
+        <article class="food-card h-100">
+          {% if donation.image_filename %}<img class="food-card-image" src="{{ url_for('static', filename='uploads/' ~ donation.image_filename) }}" alt="{{ donation.food_name }}">{% else %}<div class="food-card-placeholder"><i class="bi bi-basket2"></i></div>{% endif %}
+          <div class="p-4">
+            <div class="d-flex justify-content-between gap-2"><span class="category-pill">{{ donation.category.name }}</span><span class="urgency-label" data-countdown="{{ donation.expiry_time.strftime('%Y-%m-%dT%H:%M:%S') }}"><i class="bi bi-clock me-1"></i>Loading</span></div>
+            <h3 class="h5 mt-3 mb-1">{{ donation.food_name }}</h3>
+            <p class="text-secondary small mb-3"><i class="bi bi-geo-alt me-1"></i>{{ donation.pickup_address }}</p>
+            <div class="d-flex justify-content-between align-items-center small"><span><strong>{{ donation.meals }}</strong> meals</span><span class="text-secondary">Shared by {{ donation.donor.display_name }}</span></div>
+          </div>
+        </article>
+      </div>
+    {% else %}
+      <div class="col-12"><div class="empty-state"><i class="bi bi-basket"></i><h3 class="h5 mt-3">The next rescue starts with you</h3><p class="text-secondary mb-0">New donations will appear here as local food partners join.</p></div></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="steps-section py-5 py-lg-6">
+  <div class="container">
+    <div class="text-center mb-5"><span class="eyebrow">A simple bridge</span><h2 class="section-title mt-2">Three steps. Less waste.</h2></div>
+    <div class="row g-4">
+      <div class="col-md-4"><div class="step-card"><span class="step-number">01</span><div class="step-icon"><i class="bi bi-shop"></i></div><h3 class="h5">Share what’s fresh</h3><p class="text-secondary mb-0">Food partners list safe surplus, pickup details, and the time it needs to be collected.</p></div></div>
+      <div class="col-md-4"><div class="step-card"><span class="step-number">02</span><div class="step-icon"><i class="bi bi-geo-alt"></i></div><h3 class="h5">Match with a local NGO</h3><p class="text-secondary mb-0">Verified organizations find nearby donations and arrange a convenient pickup.</p></div></div>
+      <div class="col-md-4"><div class="step-card"><span class="step-number">03</span><div class="step-icon"><i class="bi bi-heart"></i></div><h3 class="h5">Get good food to people</h3><p class="text-secondary mb-0">Track each handoff and see the meals your community has rescued together.</p></div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

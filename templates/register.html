@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Join MealBridge{% endblock %}
+{% block content %}
+<section class="auth-wrap container py-5">
+  <div class="auth-card auth-card-wide">
+    <div class="auth-heading"><span class="auth-icon"><i class="bi bi-people"></i></span><span class="eyebrow">Join the network</span><h1 class="h2 mt-2">Let’s make good food count.</h1><p class="text-secondary">Create a donor or NGO account to get started.</p></div>
+    <form method="post" novalidate>
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label" for="role">I’m joining as</label><select class="form-select form-select-lg" id="role" name="role" required><option value="">Choose a role</option><option value="donor" {% if request.form.get('role') == 'donor' %}selected{% endif %}>Food donor</option><option value="ngo" {% if request.form.get('role') == 'ngo' %}selected{% endif %}>NGO / food receiver</option></select></div>
+        <div class="col-md-6"><label class="form-label" for="organization_name">Organization name <span class="text-secondary">(required for NGOs)</span></label><input class="form-control form-control-lg" id="organization_name" name="organization_name" maxlength="150" value="{{ request.form.get('organization_name', '') }}"></div>
+        <div class="col-md-6"><label class="form-label" for="name">Your name</label><input class="form-control form-control-lg" id="name" name="name" maxlength="120" autocomplete="name" value="{{ request.form.get('name', '') }}" required></div>
+        <div class="col-md-6"><label class="form-label" for="email">Email address</label><input class="form-control form-control-lg" id="email" name="email" type="email" autocomplete="email" value="{{ request.form.get('email', '') }}" required></div>
+        <div class="col-md-6"><label class="form-label" for="phone">Phone</label><input class="form-control form-control-lg" id="phone" name="phone" autocomplete="tel" value="{{ request.form.get('phone', '') }}"></div>
+        <div class="col-md-6"><label class="form-label" for="password">Password</label><input class="form-control form-control-lg" id="password" name="password" type="password" minlength="10" autocomplete="new-password" required><div class="form-text">At least 10 characters.</div></div>
+        <div class="col-12"><label class="form-label" for="address">Organization / pickup address</label><input class="form-control form-control-lg" id="address" name="address" maxlength="500" value="{{ request.form.get('address', '') }}" placeholder="Area, city"></div>
+        <div class="col-md-6"><label class="form-label" for="latitude">Latitude <span class="text-secondary">(optional for map matching)</span></label><input class="form-control" id="latitude" name="latitude" type="number" step="any" min="-90" max="90" value="{{ request.form.get('latitude', '') }}"></div>
+        <div class="col-md-6"><label class="form-label" for="longitude">Longitude <span class="text-secondary">(optional)</span></label><input class="form-control" id="longitude" name="longitude" type="number" step="any" min="-180" max="180" value="{{ request.form.get('longitude', '') }}"></div>
+      </div>
+      <div class="alert alert-light border mt-4 small"><i class="bi bi-info-circle me-1"></i>NGO accounts are reviewed before they can request food. Donor accounts can list food immediately.</div>
+      <button class="btn btn-success btn-lg w-100 mt-2" type="submit">Create account</button>
+    </form>
+    <p class="text-center text-secondary mt-4 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+  </div>
+</section>
+{% endblock %}

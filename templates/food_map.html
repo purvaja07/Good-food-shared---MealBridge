@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Nearby food map{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+{% block content %}
+<section class="map-page-heading">
+  <div class="container py-3">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+      <div>
+        <span class="eyebrow">Rescue before expiry</span>
+        <h1 class="h3 mb-0 mt-1">Nearby food map</h1>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span id="map-location-status" class="small text-secondary" role="status">Showing Muktainagar, Jalgaon, Maharashtra</span>
+        <button id="locate-me" class="btn btn-sm btn-outline-success" type="button"><i class="bi bi-crosshair me-1"></i>My location</button>
+      </div>
+    </div>
+  </div>
+</section>
+<section
+  id="mealbridge-food-map"
+  class="food-map-layout"
+  data-user-lat="{{ current_user.latitude if current_user.latitude is not none else '' }}"
+  data-user-lon="{{ current_user.longitude if current_user.longitude is not none else '' }}"
+  data-user-verified="{{ 'true' if current_user.is_verified else 'false' }}"
+  data-user-role="{{ current_user.role }}"
+>
+  <aside class="food-map-sidebar">
+    <div class="map-search-panel">
+      <label class="visually-hidden" for="map-search">Search food, category, or Indian address</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input id="map-search" class="form-control" type="search" maxlength="200" placeholder="Search a food or Indian address">
+        <button id="search-address" class="btn btn-success" type="button" aria-label="Find address on map" title="Find address on map"><i class="bi bi-geo-alt"></i></button>
+      </div>
+      <div class="form-text">Search an address, town, or district in India, then select the location button. Address lookup uses OpenStreetMap.</div>
+      <label class="form-label small mt-3 mb-1" for="map-category">Food category</label>
+      <select id="map-category" class="form-select form-select-sm">
+        <option value="">All categories</option>
+        {% for category in categories %}
+          <option value="{{ category.id }}">{{ category.name }}</option>
+        {% endfor %}
+      </select>
+      <label class="form-label small mt-3 mb-1" for="map-quantity">Minimum portions needed</label>
+      <div class="row g-2">
+        <div class="col-6"><input id="map-quantity" class="form-control form-control-sm" type="number" min="1" value="1" aria-label="Minimum portions needed"></div>
+        <div class="col-6"><input id="map-capacity" class="form-control form-control-sm" type="number" min="1" value="50" aria-label="Maximum portions you can collect"></div>
+      </div>
+      <div class="d-flex justify-content-between small text-secondary mt-1"><span>Minimum needed</span><span>Max portions</span></div>
+      <div class="distance-filter mt-3" role="group" aria-label="Search distance">
+        <span class="form-label small d-block mb-2">Within</span>
+        <div class="btn-group btn-group-sm w-100" role="group">
+          <button class="btn btn-outline-success" type="button" data-radius="1">1 km</button>
+          <button class="btn btn-outline-success" type="button" data-radius="5">5 km</button>
+          <button class="btn btn-outline-success" type="button" data-radius="10">10 km</button>
+          <button class="btn btn-outline-success active" type="button" data-radius="20" aria-pressed="true">20 km</button>
+        </div>
+      </div>
+      <div class="map-legend mt-3">
+        <span><i class="legend-dot legend-food"></i>Food partner</span>
+        <span><i class="legend-dot legend-ngo"></i>Verified NGO</span>
+        <span><i class="legend-dot legend-user"></i>Your location</span>
+      </div>
+    </div>
+    <div class="map-results-heading">
+      <div><strong>Food matches</strong><span id="map-result-count" class="small text-secondary ms-2">Loading…</span></div>
+      <button id="refresh-map" class="btn btn-sm btn-light" type="button" aria-label="Refresh map results"><i class="bi bi-arrow-clockwise"></i></button>
+    </div>
+    <div id="map-error" class="alert alert-warning mx-3 my-2 py-2 small" role="alert" hidden></div>
+    <div id="map-matching-note" class="map-matching-note" hidden></div>
+    <div id="map-food-list" class="map-food-list" aria-live="polite">
+      <div class="map-loading"><span class="spinner-border spinner-border-sm text-success" role="status"></span> Loading nearby donations…</div>
+    </div>
+  </aside>
+  <div class="food-map-canvas">
+    <div id="food-rescue-map" role="application" aria-label="Interactive map of available food and verified NGOs"></div>
+    <div id="route-summary" class="route-summary" hidden>
+      <div><strong id="route-distance"></strong><span id="route-time"></span></div>
+      <div class="d-flex gap-2"><a id="external-directions" class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer">Navigate</a><button id="clear-route" class="btn btn-sm btn-light" type="button" aria-label="Clear route"><i class="bi bi-x-lg"></i></button></div>
+    </div>
+  </div>
+</section>
+
+<div class="modal fade" id="mapRequestModal" tabindex="-1" aria-labelledby="mapRequestTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form id="map-request-form" class="modal-content">
+      <div class="modal-header"><h2 class="modal-title fs-5" id="mapRequestTitle">Request a food pickup</h2><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <p id="request-food-summary" class="text-secondary small"></p>
+        <input id="request-donation-id" type="hidden">
+        <label class="form-label" for="request-quantity">Portions to collect</label>
+        <input id="request-quantity" class="form-control mb-3" type="number" min="1" required>
+        <label class="form-label" for="request-pickup-time">Planned pickup time</label>
+        <input id="request-pickup-time" class="form-control mb-3" type="datetime-local" required>
+        <label class="form-label" for="request-notes">Pickup notes <span class="text-secondary">(optional)</span></label>
+        <textarea id="request-notes" class="form-control" rows="3" maxlength="1000" placeholder="Arrival estimate or collection notes"></textarea>
+        <div class="form-text mt-2">Pickup estimates and countdowns do not guarantee food safety. Confirm safe handling with the donor.</div>
+        <div id="request-form-error" class="alert alert-danger mt-3 mb-0" hidden></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button><button id="submit-map-request" class="btn btn-success" type="submit">Send request</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/food_map.js') }}"></script>
+{% endblock %}

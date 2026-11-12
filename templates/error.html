@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+{% block content %}
+<section class="container py-5"><div class="empty-state error-state"><span class="error-code">{{ code }}</span><h1 class="h3 mt-3">We couldn’t complete that request</h1><p class="text-secondary">{{ message }}</p><a class="btn btn-success" href="{{ url_for('auth.home') }}">Return home</a></div></section>
+{% endblock %}

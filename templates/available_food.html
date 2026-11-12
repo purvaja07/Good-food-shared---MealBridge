@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Available food{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+{% block content %}
+<section class="dashboard-header">
+  <div class="container py-4 py-lg-5">
+    <span class="eyebrow">Rescue before expiry</span>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+      <div><h1 class="h2 mt-2 mb-1">Available food nearby</h1><p class="text-secondary mb-0">Fresh donations, sorted by how soon they need to be collected.</p></div>
+      <span class="result-count"><i class="bi bi-basket2 me-1"></i>{{ donations|length }} donation{{ '' if donations|length == 1 else 's' }}</span>
+    </div>
+  </div>
+</section>
+<section class="container py-4">
+  <form class="filter-panel mb-4" method="get" action="{{ url_for('ngo.available_food') }}">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-5"><label class="form-label small" for="q">Search food or area</label><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="q" name="q" value="{{ search }}" placeholder="Food name, neighborhood, or street"></div></div>
+      <div class="col-md-3"><label class="form-label small" for="category">Category</label><select class="form-select" id="category" name="category"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.id }}" {% if category_id == category.id|string %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label small" for="distance">Within (km)</label><input class="form-control" id="distance" name="distance" type="number" min="1" max="200" value="{{ radius if radius else '' }}" placeholder="Any distance" {% if not has_location %}disabled{% endif %}></div>
+      <div class="col-md-2 d-grid"><button class="btn btn-success" type="submit">Search</button></div>
+    </div>
+    {% if not has_location %}<div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Add your organization’s coordinates in your dashboard to filter by distance.</div>{% endif %}
+  </form>
+
+  <div class="map-panel mb-4">
+    <div class="map-panel-heading"><div><strong>Pickup map</strong><span class="small text-secondary ms-2">Donations with coordinates</span></div><i class="bi bi-map text-green"></i></div>
+    <div id="food-map" aria-label="Map of food donations"></div>
+    <div id="map-empty" class="map-empty" {% if map_markers %}hidden{% endif %}>No map coordinates for these results yet. Use the address details to plan your route.</div>
+  </div>
+
+  <div class="row g-4">
+    {% for donation in donations %}
+      <div class="col-md-6 col-xl-4">
+        <article class="food-card h-100">
+          {% if donation.image_filename %}<img class="food-card-image" src="{{ url_for('static', filename='uploads/' ~ donation.image_filename) }}" alt="{{ donation.food_name }}">{% else %}<div class="food-card-placeholder"><i class="bi bi-basket2"></i></div>{% endif %}
+          <div class="p-4 d-flex flex-column h-100">
+            <div class="d-flex justify-content-between gap-2"><span class="category-pill">{{ donation.category.name }}</span><span class="urgency-label" data-countdown="{{ donation.expiry_time.strftime('%Y-%m-%dT%H:%M:%S') }}"><i class="bi bi-clock me-1"></i>Loading</span></div>
+            <h2 class="h5 mt-3 mb-1">{{ donation.food_name }}</h2>
+            <p class="small text-secondary mb-3">{{ (donation.description or 'Fresh surplus shared by a local food partner.')|truncate(100) }}</p>
+            <div class="food-meta"><span><i class="bi bi-people me-1"></i>{{ donation.meals }} meals</span><span><i class="bi bi-box-seam me-1"></i>{{ donation.quantity }} portions</span></div>
+            <p class="small mt-3 mb-3"><i class="bi bi-geo-alt text-green me-1"></i>{{ donation.pickup_address }}</p>
+            <div class="d-flex justify-content-between align-items-center mt-auto pt-3 border-top"><span class="small text-secondary">{{ donation.donor.display_name }}</span><a class="btn btn-sm btn-outline-success" href="{{ url_for('ngo.food_detail', donation_id=donation.id) }}">View details <i class="bi bi-arrow-right ms-1"></i></a></div>
+          </div>
+        </article>
+      </div>
+    {% else %}
+      <div class="col-12"><div class="empty-state"><i class="bi bi-search"></i><h2 class="h5 mt-3">No matching food right now</h2><p class="text-secondary mb-0">Try a different search or check back soon for fresh donations.</p></div></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  window.mealBridgeMapMarkers = {{ map_markers|tojson }};
+</script>
+{% endblock %}

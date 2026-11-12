@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}NGO dashboard{% endblock %}
+{% block content %}
+<section class="dashboard-header">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
+      <div><span class="eyebrow">Community partner workspace</span><h1 class="h2 mt-2 mb-1">Welcome, {{ current_user.display_name }}.</h1><p class="text-secondary mb-0">Find nearby food and keep each pickup on track.</p></div>
+      <div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-success" href="{{ url_for('ngo.available_food') }}"><i class="bi bi-search me-1"></i>List view</a><a class="btn btn-success" href="{{ url_for('map.food_map') }}"><i class="bi bi-map me-1"></i>Open food map</a></div>
+    </div>
+    {% if not current_user.is_verified %}<div class="verification-banner mt-4"><i class="bi bi-hourglass-split"></i><div><strong>Verification in progress</strong><span>Your organization can browse donations. Pickup requests unlock once an administrator verifies your account.</span></div></div>{% endif %}
+    <div class="row g-3 mt-3">
+      <div class="col-6 col-lg-4"><div class="metric-card"><span>Active pickups</span><strong>{{ stats.active }}</strong><i class="bi bi-truck"></i></div></div>
+      <div class="col-6 col-lg-4"><div class="metric-card"><span>Meals delivered</span><strong>{{ "{:,}".format(stats.meals) }}</strong><i class="bi bi-heart"></i></div></div>
+      <div class="col-12 col-lg-4"><div class="metric-card"><span>Completed pickups</span><strong>{{ stats.completed }}</strong><i class="bi bi-check2-circle"></i></div></div>
+    </div>
+  </div>
+</section>
+<section class="container py-4">
+  <div class="section-heading"><div><span class="eyebrow">Your rescue journey</span><h2 class="h4 mt-2">Pickup requests</h2></div></div>
+  <div class="row g-3">
+    {% for pickup in pickups %}
+      <div class="col-12"><article class="pickup-card">
+        <div class="pickup-main"><div class="pickup-icon"><i class="bi bi-basket2"></i></div><div><div class="d-flex flex-wrap align-items-center gap-2"><h3 class="h6 mb-0">{{ pickup.donation.food_name }}</h3><span class="status-badge status-{{ pickup.status }}">{{ pickup.status.replace('_', ' ')|title }}</span></div><p class="small text-secondary mb-1 mt-1">{{ pickup.requested_quantity if pickup.requested_quantity is not none else pickup.donation.quantity }} portions · {{ pickup.requested_meals if pickup.requested_meals is not none else pickup.donation.meals }} meals · Shared by {{ pickup.donor.display_name }}</p><p class="small mb-0"><i class="bi bi-geo-alt text-green me-1"></i>{{ pickup.donation.pickup_address }}</p></div></div>
+        <div class="pickup-side"><div class="small text-secondary">Scheduled pickup</div><strong>{{ pickup.pickup_date.strftime('%d %b %Y, %H:%M') }}</strong>
+          {% if pickup.status == 'accepted' or pickup.status == 'picked_up' %}
+            <form method="post" action="{{ url_for('ngo.update_pickup_status', request_id=pickup.id) }}" class="mt-2"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="{{ 'picked_up' if pickup.status == 'accepted' else 'completed' }}"><button class="btn btn-sm btn-success" type="submit">{{ 'Mark picked up' if pickup.status == 'accepted' else 'Complete pickup' }}</button></form>
+          {% endif %}
+        </div>
+      </article></div>
+    {% else %}
+      <div class="col-12"><div class="empty-state"><i class="bi bi-signpost"></i><h3 class="h5 mt-3">Your next pickup starts nearby</h3><p class="text-secondary">Browse available food to find a donation that works for your community.</p><a class="btn btn-success" href="{{ url_for('ngo.available_food') }}">Browse available food</a></div></div>
+    {% endfor %}
+  </div>
+</section>
+<section class="container pb-5">
+  <div class="section-heading"><div><span class="eyebrow">Organization details</span><h2 class="h4 mt-2">Your profile</h2></div></div>
+  <form class="panel-card p-4" method="post" action="{{ url_for('ngo.update_profile') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label" for="ngo-name">Contact name</label><input class="form-control" id="ngo-name" name="name" maxlength="120" value="{{ current_user.name }}" required></div>
+      <div class="col-md-6"><label class="form-label" for="ngo-org">Organization name</label><input class="form-control" id="ngo-org" name="organization_name" maxlength="150" value="{{ current_user.organization_name or '' }}"></div>
+      <div class="col-md-6"><label class="form-label" for="ngo-phone">Phone</label><input class="form-control" id="ngo-phone" name="phone" maxlength="30" value="{{ current_user.phone or '' }}"></div>
+      <div class="col-md-6"><label class="form-label" for="ngo-address">Address / area</label><input class="form-control" id="ngo-address" name="address" maxlength="2000" value="{{ current_user.address or '' }}"></div>
+      <div class="col-md-6"><label class="form-label" for="ngo-lat">Map latitude</label><input class="form-control" id="ngo-lat" name="latitude" type="number" step="any" min="-90" max="90" value="{{ current_user.latitude if current_user.latitude is not none else '' }}"></div>
+      <div class="col-md-6"><label class="form-label" for="ngo-lon">Map longitude</label><input class="form-control" id="ngo-lon" name="longitude" type="number" step="any" min="-180" max="180" value="{{ current_user.longitude if current_user.longitude is not none else '' }}"></div>
+    </div>
+    <button class="btn btn-outline-success mt-3" type="submit">Save profile</button>
+  </form>
+</section>
+{% endblock %}
